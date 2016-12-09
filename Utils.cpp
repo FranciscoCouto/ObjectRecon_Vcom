@@ -22,13 +22,22 @@ Mat Utils::extractLocalFeaturesSIFT()
 	std::vector<KeyPoint> keypoints;
 	Mat extracted_descriptor, train_descriptors;
 
-	for (int i = 1; i < n_train_images; i++)
-	{	
+	for (int i = 1; i <= n_train_images; i++)
+	{
 		filename = "images/train/" + to_string(i) + ".png";
-		if (!openImage(filename, image))
+		if (!openImage(filename, image)) {
+			cout << "Could not open image " + to_string(i);
 			continue;
+		}
 
 		detector->detect(image, keypoints);
+
+		if (keypoints.empty()) {
+			//cout << "Could not get keypoints for " + to_string(i);
+			fails.push_back(i);
+			continue;
+		}
+
 		extractor->compute(image, keypoints, extracted_descriptor);
 		train_descriptors.push_back(extracted_descriptor);
 
@@ -82,15 +91,21 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	cout << "Extracting histograms in the form of BOW for each trainning image" << endl;
 
-	for (int i = 1; i < n_train_images; i++)
+	for (int i = 1; i <= n_train_images; i++)
 	{
 		filename = "images/train/" + to_string(i) + ".png";
-		if (!openImage(filename, image))
+		if (!openImage(filename, image)) {
+			cout << "Could not open image " + to_string(i);
 			continue;
+		}
+
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) continue;
+		if (keypoints.empty()) {
+			//cout << "Could not get keypoints for " + to_string(i);
+			continue;
+		}
 
 
 		extractor->compute(image, keypoints, BOW_Descriptor);
@@ -117,12 +132,16 @@ void Utils::applySVM(Mat training_data, Mat dictionary)
 	CvSVMParams params;
 	params.svm_type = CvSVM::C_SVC;
 	params.kernel_type = CvSVM::LINEAR;
-	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+	params.term_crit = tc;
 
 	cout << "Training the SVM" << endl;
 
 	CvSVM SVM;
 	cout << training_data.size() << "     " << labels.size();
+
+	CV_Assert(!training_data.empty() && training_data.type() == CV_32FC1);
+	CV_Assert(!labels.empty() && labels.type() == CV_32SC1);
+
 	SVM.train(training_data, labels, Mat(), Mat(), params); //SVM is trainning with the images (descriptors) - experimentar trainauto
 
 	cout << "SVM Classifier Trained" << endl;
@@ -139,7 +158,7 @@ void Utils::applySVM(Mat training_data, Mat dictionary)
 	//Set the dictionary with the vocabulary we created in the first step
 	bowDE.setVocabulary(dictionary);
 
-	for (int i = 1; i < n_test_images; i++)
+	for (int i = 1; i <= n_test_images; i++)
 	{
 		filename = "images/test/" + to_string(i) + ".png";
 		if (!openImage(filename, image))
@@ -149,23 +168,27 @@ void Utils::applySVM(Mat training_data, Mat dictionary)
 		extractor->compute(image, keypoints, BOW_Descriptor);
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
-		cout << BOW_Descriptor;
+		//cout << BOW_Descriptor;
 
 
-		SVM.predict(BOW_Descriptor);
+		float res = SVM.predict(BOW_Descriptor);
 
-		cout << "Image " << i << "is a: " << names[i] << endl;
+		cout << "Image " << i << "predicted to be: " << res << names[res] << endl;
 
-		FileStorage fs("results.txt", FileStorage::WRITE);
-		fs << "Image " + i << names[i];
+		FileStorage fs("results.txt", FileStorage::APPEND);
+
+		fs << "Image" << names[res];
 		fs.release();
 
 		loadbar(i, n_test_images, 50);
 	}
+
+
+	waitKey(-1);
 }
 
 bool Utils::openImage(const std::string & filename, Mat & image)
-{	
+{
 	//cout << filename;
 	image = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
 	if (!image.data) {
@@ -180,21 +203,24 @@ void Utils::parseCSV()
 
 	cout << "Parsing Labels from CSV" << endl;
 
-	ifstream file("trainLabels2.csv");
+	ifstream file("trainLabels.csv");
 
 	// Get and drop a line
 	file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
 	string line, id;
 
-	int what_is_it = 0;
+	int what_is_it = 0, index = 1;
 
 	while (getline(file, line))
 	{
+		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; cout << "pissou";  continue; }
+
 		std::stringstream  lineStream(line);
 		std::string        cell;
 		while (getline(lineStream, cell, ','))
 		{
+
 			if (what_is_it == 0) {
 				labels.push_back(stoi(cell));
 				what_is_it++;
@@ -202,14 +228,17 @@ void Utils::parseCSV()
 			else {
 				names.push_back(cell);
 				what_is_it = 0;
+				index++;
 			}
 		}
+
+		if (index -1 == n_train_images) { break; }
 	}
 
 	cout << "Ended Parsing Labels from CSV" << endl;
 }
 
-inline void Utils::loadbar(unsigned int x, unsigned int n, unsigned int w )
+inline void Utils::loadbar(unsigned int x, unsigned int n, unsigned int w)
 {
 
 	if ((x != n) && (x % (n / 100 + 1) != 0)) return;
@@ -218,7 +247,7 @@ inline void Utils::loadbar(unsigned int x, unsigned int n, unsigned int w )
 	int   c = ratio * w;
 
 	cout << setw(3) << (int)(ratio * 100) << "% [";
-	for (int x = 0; x<c; x++) cout << "=";
-	for (int x = c; x<w; x++) cout << " ";
+	for (int x = 0; x < c; x++) cout << "=";
+	for (int x = c; x < w; x++) cout << " ";
 	cout << "]\r" << flush;
 }

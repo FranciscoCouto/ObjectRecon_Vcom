@@ -23,6 +23,7 @@ public:
 
 	Mat labels;
 	vector <string > names;
+	vector <int> fails;
 
 	Utils(int n_words, int n_train_images,int n_test_images, TermCriteria tc);
 
