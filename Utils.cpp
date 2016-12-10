@@ -39,12 +39,17 @@ Mat Utils::extractLocalFeaturesSIFT()
 		}
 
 		extractor->compute(image, keypoints, extracted_descriptor);
+
+		if (extracted_descriptor.empty()) { continue; }
+
 		train_descriptors.push_back(extracted_descriptor);
 
 		loadbar(i, n_train_images, 50);
 	}
 
 	cout << endl;
+
+	cout << "Got the unclustered features!" << endl;
 	return train_descriptors;
 
 }
@@ -52,17 +57,20 @@ Mat Utils::extractLocalFeaturesSIFT()
 Mat Utils::CreateBOW(Mat train_descriptors)
 {
 
-	cout << "Creating Bag of Words" << endl;
+	cout << "Clustering Features..." << endl;
 
-	BOWKMeansTrainer bowTrainer(n_words, tc, 1, KMEANS_PP_CENTERS);
+	int retries = 1;
+	int flags = KMEANS_PP_CENTERS;
+
+	BOWKMeansTrainer bowTrainer(n_words, tc, retries, flags);
 
 	Mat dictionary = bowTrainer.cluster(train_descriptors); //Created vocabulary using KMeans
-
-	cout << "Storing Bag of Words" << endl;
 
 	FileStorage fs("dictionary.yml", FileStorage::WRITE);
 	fs << "vocabulary" << dictionary;
 	fs.release();
+
+	cout << "Vocabulary stored in Dictionary.yml!" << endl;
 
 	return dictionary;
 
@@ -107,8 +115,6 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 			continue;
 		}
 
-
-		extractor->compute(image, keypoints, BOW_Descriptor);
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 		training_data.push_back(BOW_Descriptor);
@@ -124,25 +130,31 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 }
 
-void Utils::applySVM(Mat training_data, Mat dictionary)
+void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 {
 
 	cout << "Applying SVM" << endl;
 
 	CvSVMParams params;
+	//SVM type is defined as n-class classification n>=2, allows imperfect separation of classes
 	params.svm_type = CvSVM::C_SVC;
+	// No mapping is done, linear discrimination (or regression) is done in the original feature space.
 	params.kernel_type = CvSVM::LINEAR;
-	params.term_crit = tc;
+	//Define the termination criterion for SVM algorithm.
+	//Here stop the algorithm after the achieved algorithm-dependent accuracy becomes lower than epsilon
+	//or run for maximum 100 iterations
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
 
 	cout << "Training the SVM" << endl;
 
 	CvSVM SVM;
-	cout << training_data.size() << "     " << labels.size();
+
+	cout << training_data.size() << "     " << labels.size() << endl;
 
 	CV_Assert(!training_data.empty() && training_data.type() == CV_32FC1);
 	CV_Assert(!labels.empty() && labels.type() == CV_32SC1);
 
-	SVM.train(training_data, labels, Mat(), Mat(), params); //SVM is trainning with the images (descriptors) - experimentar trainauto
+	SVM.train(training_data, labels); //SVM is trainning with the images (descriptors) - experimentar trainauto
 
 	cout << "SVM Classifier Trained" << endl;
 
@@ -158,6 +170,8 @@ void Utils::applySVM(Mat training_data, Mat dictionary)
 	//Set the dictionary with the vocabulary we created in the first step
 	bowDE.setVocabulary(dictionary);
 
+	FileStorage fs("results.txt", FileStorage::APPEND);
+
 	for (int i = 1; i <= n_test_images; i++)
 	{
 		filename = "images/test/" + to_string(i) + ".png";
@@ -168,23 +182,20 @@ void Utils::applySVM(Mat training_data, Mat dictionary)
 		extractor->compute(image, keypoints, BOW_Descriptor);
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
-		//cout << BOW_Descriptor;
-
 
 		float res = SVM.predict(BOW_Descriptor);
 
-		cout << "Image " << i << "predicted to be: " << res << names[res] << endl;
 
-		FileStorage fs("results.txt", FileStorage::APPEND);
+		cout << res << names.size() << endl;
+		cout << "Image " << i << "predicted to be: " << res << names[res-1] << endl;
 
-		fs << "Image" << names[res];
+
+		fs << "Image" << names[res-1];
 		fs.release();
+
 
 		loadbar(i, n_test_images, 50);
 	}
-
-
-	waitKey(-1);
 }
 
 bool Utils::openImage(const std::string & filename, Mat & image)
@@ -198,12 +209,14 @@ bool Utils::openImage(const std::string & filename, Mat & image)
 	return true;
 }
 
-void Utils::parseCSV()
+Mat Utils::parseCSV()
 {
 
 	cout << "Parsing Labels from CSV" << endl;
 
 	ifstream file("trainLabels.csv");
+
+	Mat labels;
 
 	// Get and drop a line
 	file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -214,7 +227,7 @@ void Utils::parseCSV()
 
 	while (getline(file, line))
 	{
-		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; cout << "pissou";  continue; }
+		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; names.push_back("");  continue; }
 
 		std::stringstream  lineStream(line);
 		std::string        cell;
@@ -236,6 +249,8 @@ void Utils::parseCSV()
 	}
 
 	cout << "Ended Parsing Labels from CSV" << endl;
+
+	return labels;
 }
 
 inline void Utils::loadbar(unsigned int x, unsigned int n, unsigned int w)

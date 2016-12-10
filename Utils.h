@@ -21,7 +21,6 @@ public:
 	int n_train_images, n_test_images;
 	TermCriteria tc;
 
-	Mat labels;
 	vector <string > names;
 	vector <int> fails;
 
@@ -36,13 +35,15 @@ public:
 	//Create Training Data by creating histograms for each image to be used in SVM
 	Mat CreateTrainingData(Mat dictionary);
 
-	void applySVM(Mat training_data, Mat dictionary);
+	Mat CreateTrainingData2();
+
+	void applySVM(Mat training_data, Mat labels, Mat dictionary);
 
 	//OpenCv shenanigans
 	bool openImage(const std::string &filename, Mat &image);
 
 	//Parsing Files
-	void parseCSV();
+	Mat parseCSV();
 
 	inline void loadbar(unsigned int x, unsigned int n, unsigned int w);
 };
