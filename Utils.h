@@ -17,25 +17,23 @@ class Utils
 {
 public:
 
-	int n_words;
+	int dictionary_size;
 	int n_train_images, n_test_images;
 	TermCriteria tc;
 
-	vector <string > names;
+	map< std::string, int> names;
 	vector <int> fails;
 
 	Utils(int n_words, int n_train_images,int n_test_images, TermCriteria tc);
 
 	//Feature Extraction - SIFT
-	Mat extractLocalFeaturesSIFT();
+	Mat extractLocalFeaturesSURF();
 
 	//Clustering the Feature Vectors with KMeans
 	Mat CreateBOW(Mat train_descriptors);
 
 	//Create Training Data by creating histograms for each image to be used in SVM
 	Mat CreateTrainingData(Mat dictionary);
-
-	Mat CreateTrainingData2();
 
 	void applySVM(Mat training_data, Mat labels, Mat dictionary);
 
@@ -44,6 +42,8 @@ public:
 
 	//Parsing Files
 	Mat parseCSV();
+
+	String findInMap(int value);
 
 	inline void loadbar(unsigned int x, unsigned int n, unsigned int w);
 };

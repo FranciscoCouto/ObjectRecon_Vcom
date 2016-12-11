@@ -1,21 +1,24 @@
 #include "Utils.h"
 
-Utils::Utils(int n_words, int n_train_images, int n_test_images, TermCriteria tc)
+Utils::Utils(int dictionary_size, int n_train_images, int n_test_images, TermCriteria tc)
 {
 
-	this->n_words = n_words;
+	this->dictionary_size = dictionary_size;
 	this->n_train_images = n_train_images;
 	this->n_test_images = n_test_images;
 	this->tc = tc;
+
+	names = { {"airplane", 1},{ "automobile", 2 },{ "bird", 3 },{"cat", 4 },{ "deer", 5 },{ "dog", 6 },{ "frog", 7 },{ "horse", 8 },{ "ship", 9 },{ "truck", 10 } };
 }
 
-Mat Utils::extractLocalFeaturesSIFT()
+Mat Utils::extractLocalFeaturesSURF()
 {
 
-	cout << "Extracting the Descriptors (Feature Vectors) using SIFT" << endl;
+	cout << "Extracting the Descriptors (Feature Vectors) using SURF" << endl;
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
+	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
 
 	Mat image;
 	string filename;
@@ -26,6 +29,7 @@ Mat Utils::extractLocalFeaturesSIFT()
 	{
 		filename = "images/train/" + to_string(i) + ".png";
 		if (!openImage(filename, image)) {
+			fails.push_back(i);
 			cout << "Could not open image " + to_string(i);
 			continue;
 		}
@@ -33,23 +37,21 @@ Mat Utils::extractLocalFeaturesSIFT()
 		detector->detect(image, keypoints);
 
 		if (keypoints.empty()) {
-			//cout << "Could not get keypoints for " + to_string(i);
 			fails.push_back(i);
 			continue;
 		}
 
 		extractor->compute(image, keypoints, extracted_descriptor);
 
-		if (extracted_descriptor.empty()) { continue; }
+		if (extracted_descriptor.empty()) { fails.push_back(i); continue; }
 
 		train_descriptors.push_back(extracted_descriptor);
 
 		loadbar(i, n_train_images, 50);
 	}
 
-	cout << endl;
-
-	cout << "Got the unclustered features!" << endl;
+	//cout << train_descriptors.size() << endl;
+	cout << endl << "Got the unclustered features!" << endl;
 	return train_descriptors;
 
 }
@@ -62,7 +64,7 @@ Mat Utils::CreateBOW(Mat train_descriptors)
 	int retries = 1;
 	int flags = KMEANS_PP_CENTERS;
 
-	BOWKMeansTrainer bowTrainer(n_words, tc, retries, flags);
+	BOWKMeansTrainer bowTrainer(dictionary_size, tc, retries, flags);
 
 	Mat dictionary = bowTrainer.cluster(train_descriptors); //Created vocabulary using KMeans
 
@@ -81,11 +83,12 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	cout << "Creating Training Data for SVM" << endl;
 
-	//create a nearest neighbor matcher
+	//create a fast nearest neighbor matcher
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
+	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
 
 	//create BoF (or BoW) descriptor extractor
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
@@ -101,8 +104,11 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	for (int i = 1; i <= n_train_images; i++)
 	{
+		if ((find(fails.begin(), fails.end(), i) != fails.end())) { continue; }
+
 		filename = "images/train/" + to_string(i) + ".png";
 		if (!openImage(filename, image)) {
+
 			cout << "Could not open image " + to_string(i);
 			continue;
 		}
@@ -110,12 +116,11 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) {
-			//cout << "Could not get keypoints for " + to_string(i);
-			continue;
-		}
+		if (keypoints.empty()) { continue;	}
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
+
+		if (BOW_Descriptor.empty()) { continue; }
 
 		training_data.push_back(BOW_Descriptor);
 
@@ -123,7 +128,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	}
 
-
+	cout << endl;
 	cout << "Training Data Created" << endl;
 
 	return training_data;
@@ -139,7 +144,10 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	//SVM type is defined as n-class classification n>=2, allows imperfect separation of classes
 	params.svm_type = CvSVM::C_SVC;
 	// No mapping is done, linear discrimination (or regression) is done in the original feature space.
-	params.kernel_type = CvSVM::LINEAR;
+	params.kernel_type = CvSVM::RBF;
+
+	//params.gamma = 0.1;
+	//params.C = 0;
 	//Define the termination criterion for SVM algorithm.
 	//Here stop the algorithm after the achieved algorithm-dependent accuracy becomes lower than epsilon
 	//or run for maximum 100 iterations
@@ -154,7 +162,10 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	CV_Assert(!training_data.empty() && training_data.type() == CV_32FC1);
 	CV_Assert(!labels.empty() && labels.type() == CV_32SC1);
 
-	SVM.train(training_data, labels); //SVM is trainning with the images (descriptors) - experimentar trainauto
+	//#pragma omp parallel for schedule(dynamic,3)
+	SVM.train_auto(training_data, labels, Mat(), Mat(), params); //SVM is trainning with the images (descriptors) - experimentar trainauto
+	//SVM.train(training_data, labels, Mat(), Mat(), params);
+	cout << params.gamma << params.degree;
 
 	cout << "SVM Classifier Trained" << endl;
 
@@ -164,13 +175,16 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
 	//Set the dictionary with the vocabulary we created in the first step
 	bowDE.setVocabulary(dictionary);
 
-	FileStorage fs("results.txt", FileStorage::APPEND);
+	ofstream results;
+	results.open("results.csv");
+
+	results << "Id, name\n";
 
 	for (int i = 1; i <= n_test_images; i++)
 	{
@@ -179,23 +193,32 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 			continue;
 
 		detector->detect(image, keypoints);
+
+		if (keypoints.empty()) {
+			//cout << "Could not get keypoints for " + to_string(i);
+			continue;
+		}
+
 		extractor->compute(image, keypoints, BOW_Descriptor);
+
+		if (BOW_Descriptor.empty()) {
+			//cout << "Could not get keypoints for " + to_string(i);
+			continue;
+		}
+
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 
-		float res = SVM.predict(BOW_Descriptor);
+		float res = SVM.predict(BOW_Descriptor); //retorna a label correspondente, de seguida procuramos no map o nome associado
 
+		cout << "Image " << i << "predicted to be: " << findInMap(res) << res << endl;
 
-		cout << res << names.size() << endl;
-		cout << "Image " << i << "predicted to be: " << res << names[res-1] << endl;
-
-
-		fs << "Image" << names[res-1];
-		fs.release();
-
-
+		results << i << "," << findInMap(res) << "," << "\n";
+		
 		loadbar(i, n_test_images, 50);
 	}
+
+	results.close();
 }
 
 bool Utils::openImage(const std::string & filename, Mat & image)
@@ -227,7 +250,7 @@ Mat Utils::parseCSV()
 
 	while (getline(file, line))
 	{
-		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; names.push_back("");  continue; }
+		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; continue; }
 
 		std::stringstream  lineStream(line);
 		std::string        cell;
@@ -235,22 +258,40 @@ Mat Utils::parseCSV()
 		{
 
 			if (what_is_it == 0) {
-				labels.push_back(stoi(cell));
 				what_is_it++;
 			}
 			else {
-				names.push_back(cell);
+				//cout << cell << names.at(cell);
+				labels.push_back(names.at(cell));
 				what_is_it = 0;
 				index++;
 			}
 		}
 
-		if (index -1 == n_train_images) { break; }
+		if ((index -1) == n_train_images) { break; }
 	}
 
-	cout << "Ended Parsing Labels from CSV" << endl;
+	cout << "Finished Parsing Labels from CSV" << endl;
 
 	return labels;
+}
+
+String Utils::findInMap(int value) {
+
+	std::map<std::string, int>::const_iterator it;
+	string name = "";
+
+	for (it = names.begin(); it != names.end(); ++it)
+	{
+		if (it->second == value)
+		{
+			name = it->first;
+			break;
+		}
+	}
+
+	return name;
+
 }
 
 inline void Utils::loadbar(unsigned int x, unsigned int n, unsigned int w)
