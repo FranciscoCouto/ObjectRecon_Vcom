@@ -2,3 +2,12 @@ images/
 Debug/
 ObjectRecon_VCOM.vcxproj
 x64/
+CNN_keras/model_6_epochs_50/
+CNN_keras/model_2_epochs_10/
+CNN_keras/model_3_epochs_10/
+CNN_keras/model_1_epochs_10/
+CNN_keras/model_4_epochs_10/
+CNN_keras/model_0_epochs_80/
+CNN_keras/model_5_epochs_10/
+CNN_keras/model_6_epochs_10/
+CNN_keras/model_0_epochs_10/

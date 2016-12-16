@@ -20,7 +20,7 @@ nb_filters = 32
 kernel_size = (3, 3)
 batch_size = 64
 nb_classes = 10
-nb_epoch = 40
+nb_epoch = 80
 
 labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
@@ -58,8 +58,6 @@ def main():
                 nb_epoch = int(sys.argv[3])
 
     elif(sys.argv[1] == 'test'):
-        print("AINDA NÃO PUS ISTO A LER AS REDES PRE-TREINADAS, MAS HÁ FUNÇÕES PARA ISSO É SÓ CHAMAR")
-        sys.exit(0)
         train = False
         if(sys.argv[2] == 'resnet50'):
             use_resnet = True
@@ -82,33 +80,41 @@ def main():
     start_time = time.time()
 
     rnd.seed(123)
-
+    x_train, y_train, x_test, y_test, input_shape = loadCifar_10Dataset()
     if (train):
         # create model
         if (use_resnet == False):
             # load dataset
-            x_train, y_train, x_test, y_test, input_shape = loadCifar_10Dataset()
             print("\n # RUNNING MODEL NUM: " + str(model_num) + " #\n")
             model = Sequential()
-            if model_num == 0:  # acc: 0.68810  com 10 epochs - time por epoch: 850s
-                model = model_0(input_shape)
-
-            elif model_num == 1:  # acc: 0.68910 com 20 epochs - time por epoch: 70s
-                model = keras_cifar_10_example_code(input_shape)
-
-            elif model_num == 2:
+            if model_num == 0:
+            	# acc: 0.73370 com 10 epochs
                 # acc: 0.81 com 20 epochs - time por epoch: 175s
                 # acc: 0.83730 com 40 epochs => total 7026s
+                # acc: 0.84150 com 80 epochs
+                model = model_0(input_shape)
+
+            elif model_num == 1:
+            	# acc: 0.75590 com 10 epochs
+                model = model_1(input_shape)
+
+            elif model_num == 2:
+            	# acc: 0.76290 com 10 epochs
                 model = model_2(input_shape)
 
-            elif model_num == 3:  # acc: 0.77  com 20 epochs - time por epoch: 64s
+            elif model_num == 3:
+            	# acc: 0.75540 com 10
                 model = model_3(input_shape)
-
+            elif model_num == 4:
+            	# acc: 0.77260 com 10
+            	model = model_4(input_shape)
             elif model_num == 5:
-                model = leNet5(input_shape)
-
-            elif model_num == 22:
-                model = model_2_2(input_shape)
+            	# acc: 0.78170 com 10
+            	model = model_5(input_shape)
+            elif model_num == 6:
+            	# acc: 0.79630 com 10
+            	# acc: 0.84970 com 50
+            	model = model_6(input_shape)
 
             # data augmentation
             '''
@@ -159,22 +165,29 @@ def main():
                                                   save_weights_only=False, mode='auto')
 
             # stop training if not improving
+            '''
             earlyStop_callback = EarlyStopping(monitor='val_loss', min_delta=0.002, patience=10, verbose=1, mode='auto')
+            '''
 
             # reduce learning rate if model not improving
-            reduceLR_callback = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, verbose=1,
+            reduceLR_callback = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10, verbose=1,
                                                   mode='auto', epsilon=0.0001, cooldown=0, min_lr=0.000001)
 
             # save epoch results in csv file
             csv_logger_callback = CSVLogger(filename=directory + '/training.csv', separator=";", append=True)
 
+            # history = model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, validation_split=0.1,
+            #                    callbacks=[checkpoint_callback, earlyStop_callback, reduceLR_callback, csv_logger_callback])
             history = model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=nb_epoch, verbose=1, validation_split=0.1,
-                                callbacks=[checkpoint_callback, earlyStop_callback, reduceLR_callback, csv_logger_callback])
+                                callbacks=[checkpoint_callback, reduceLR_callback, csv_logger_callback])
 
             print("--- %s seconds ---" % (time.time() - start_time))
+            open(directory + "/exec_time_" + str(time.time() - start_time), 'a').close()
+
             # test the model
             score = model.evaluate(x_test, y_test)
             print("\nTest accuracy: %0.05f" % score[1])
+            open(directory + "/score_" + str(score[1]), 'a').close()
 
             saveModel(model, directory + "/model_num_" + str(model_num))
 
@@ -183,146 +196,15 @@ def main():
         else:
             print("\n # RUNNING RESNET50 NEURONAL NETWORK # \n")
             resnet50()
-
-
-def loadCifar_10Dataset():
-    # Dataset of 50,000 32x32 color training images, labeled over 10
-    # categories, and 10,000 test images.
-    from keras.datasets import cifar10
-    img_w = img_h = 32
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-
-    print('X_train shape:', x_train.shape)
-    print(x_train.shape[0], 'train samples')
-    print(x_test.shape[0], 'test samples')
-
-    x_train = x_train.astype('float32') / 255
-    x_test = x_test.astype('float32') / 255
-
-    y_train = np_utils.to_categorical(y_train, nb_classes)
-    y_test = np_utils.to_categorical(y_test, nb_classes)
-
-    input_shape = x_train.shape[1:]
-    print('input shape:', input_shape)
-
-    return (x_train, y_train, x_test, y_test, input_shape)
-
-
-def saveModel(model, model_name):
-    # serialize model to JSON
-    model_json = model.to_json()
-    with open(model_name + ".json", "w") as json_file:
-        json_file.write(model_json)
-    # serialize weights to HDF5
-    model.save_weights(model_name + ".h5")
-    print("Saved model to disk")
-
-
-def loadModel(model_name):
-    # load json and create model
-    json_file = open(model_name + '.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-    loaded_model = model_from_json(loaded_model_json)
-    # load weights into new model
-    loaded_model.load_weights(model_name + ".h5")
-    print("Loaded model from disk")
-    return loaded_model
-
-
-def plotTrainingHistory(history, directory):
-    plt.plot(history.history['val_acc'])
-    plt.ylabel('accuracy')
-    plt.xlabel('epochs')
-    plt.legend(['validation accuracy'], loc='upper left')
-    plt.savefig(directory + "/graphic.png")
-    print("evolution graphic saved: " + directory + "/acc_graphic.png")
-    plt.plot(history.history['val_loss'])
-    plt.ylabel('loss')
-    plt.xlabel('epochs')
-    plt.legend(['validation loss'], loc='upper left')
-    plt.savefig(directory + "/loss_graphic.png")
-    print("evolution graphic saved: " + directory + "/loss_graphic.png")
-
-
-def showErrors(model, x_test, y_test, directory):
-    y_hat = model.predict_classes(x_test)
-    y_test_array = y_test.argmax(1)
-    pd.crosstab(y_hat, y_test_array)
-    test_wrong = [im for im in zip(x_test, y_hat, y_test_array) if im[1] != im[2]]
-    plt.figure(figsize=(32, 32))
-    for ind, val in enumerate(test_wrong[:20]):
-        plt.subplot(5, 4, ind + 1)
-        plt.axis("off")
-        plt.text(33, 15, labels[val[2]], fontsize=14, color='green')  # correct
-        plt.text(33, 30, labels[val[1]], fontsize=14, color='red')  # predicted
-        im = val[0].reshape(3, 32, 32).transpose(1, 2, 0)
-        plt.imshow(im)
-    plt.savefig(directory + "/errors.png")
-    print("errors images saved: " + directory + "/errors.png")
+    else:
+        model = loadModel(str(model_num))
+        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+        score = model.evaluate(x_test, y_test)
+        print("\nTest accuracy: %0.05f" % score[1])
 
 
 def model_0(input_shape):
-    model = Sequential()
-
-    model.add(Convolution2D(96, kernel_size[0], kernel_size[1], border_mode='valid', input_shape=input_shape))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(96, kernel_size[0], kernel_size[1]))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(192, kernel_size[0], kernel_size[1]))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(192, kernel_size[0], kernel_size[1]))
-    model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Convolution2D(192, kernel_size[0], kernel_size[1]))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(192, 1, 1))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(10, 1, 1))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-
-    model.add(Flatten())
-    model.add(Dense(nb_classes))
-    model.add(Activation('softmax'))
-
-    # sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=False)
-    # model.compile(loss='categorical_crossentropy',optimizer=sgd, metrics=['accuracy'])
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
-    return model
-
-
-def keras_cifar_10_example_code(input_shape):
-    model = Sequential()
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1], border_mode='valid', input_shape=input_shape))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))  # 28 x 28
-    model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(2, 2)))  # 14x14
-    model.add(Dropout(0.25))
-    model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
-
-    model.add(Dropout(0.5))
-    model.add(Dense(10))
-    model.add(Activation('softmax'))
-
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
-    return model
-
-
-def model_2(input_shape):
     model = Sequential()
 
     model.add(Convolution2D(64, 3, 3, border_mode='full', input_shape=input_shape))
@@ -364,11 +246,31 @@ def model_2(input_shape):
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
     return model
 
+# igual mas com outro optimizer
 
-def model_2_2(input_shape):
+
+def model_1(input_shape):
     model = Sequential()
 
-    model.add(Convolution2D(128, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Convolution2D(64, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
     model.add(Activation('relu'))
 
     model.add(Convolution2D(128, 3, 3))
@@ -377,24 +279,6 @@ def model_2_2(input_shape):
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
 
-    model.add(Convolution2D(256, 3, 3))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(256, 3, 3))
-    model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Convolution2D(512, 3, 3))
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(512, 3, 3))
-    model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
     model.add(Flatten())
     model.add(Dense(512))
     model.add(Activation('relu'))
@@ -403,29 +287,37 @@ def model_2_2(input_shape):
     model.add(Dense(nb_classes))
     model.add(Activation('softmax'))
 
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
     return model
 
-
+# com menos uma pool
 def model_3(input_shape):
     model = Sequential()
-    model.add(Convolution2D(32, 5, 5, border_mode='same', input_shape=input_shape))
-    model.add(Activation('relu'))
 
-    model.add(Convolution2D(64, 3, 3))
-    model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(3, 3), strides=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Convolution2D(64, 3, 3))
+    model.add(Convolution2D(64, 3, 3, border_mode='full', input_shape=input_shape))
     model.add(Activation('relu'))
 
     model.add(Convolution2D(64, 3, 3))
     model.add(Activation('relu'))
 
     model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
     model.add(Dropout(0.25))
 
     model.add(Flatten())
@@ -440,34 +332,176 @@ def model_3(input_shape):
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
     return model
 
-
-def leNet5(input_shape):
+# com menos uma pool + 1 conv
+def model_2(input_shape):
     model = Sequential()
 
-    # first set of CONV => RELU => POOL
-    model.add(Convolution2D(64, 3, 3, border_mode="same", input_shape=input_shape))
-    model.add(Activation("relu"))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Convolution2D(64, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Activation('relu'))
 
-    # second set of CONV => RELU => POOL
-    model.add(Convolution2D(128, 3, 3, border_mode="same"))
-    model.add(Activation("relu"))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
 
-    # set of FC => RELU layers
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Dropout(0.25))
+
     model.add(Flatten())
     model.add(Dense(512))
-    model.add(Activation("relu"))
+    model.add(Activation('relu'))
 
-    # softmax classifier
+    model.add(Dropout(0.5))
     model.add(Dense(nb_classes))
-    model.add(Activation("softmax"))
+    model.add(Activation('softmax'))
 
-    opt = SGD(lr=0.01)
-    model.compile(loss="categorical_crossentropy", optimizer=opt, metrics=["accuracy"])
-
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
     return model
 
+# trocar um pool por conv
+def model_4(input_shape):
+    model = Sequential()
+
+    model.add(Convolution2D(64, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(64, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+
+    model.add(Dropout(0.5))
+    model.add(Dense(nb_classes))
+    model.add(Activation('softmax'))
+
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    return model
+
+def model_5(input_shape):
+    model = Sequential()
+
+    model.add(Convolution2D(96, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(256, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(256, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(512, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+
+    model.add(Dropout(0.25))
+
+    model.add(Flatten())
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+
+    model.add(Dropout(0.5))
+    model.add(Dense(nb_classes))
+    model.add(Activation('softmax'))
+
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    return model
+
+def model_6(input_shape):
+    model = Sequential()
+
+    model.add(Convolution2D(96, 3, 3, border_mode='full', input_shape=input_shape))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(96, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(128, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(256, 3, 3))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.25))
+
+    model.add(Convolution2D(256, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(Convolution2D(512, 3, 3))
+    model.add(Activation('relu'))
+
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Dropout(0.5))
+
+    model.add(Flatten())
+    model.add(Dense(nb_classes))
+    model.add(Activation('softmax'))
+
+    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
+    return model
 
 def resnet50():
 
@@ -543,6 +577,82 @@ def resnet50():
     plotTrainingHistory(history, directory)
     showErrors(model, x_test, y_test, directory)
 
+
+def loadCifar_10Dataset():
+    # Dataset of 50,000 32x32 color training images, labeled over 10
+    # categories, and 10,000 test images.
+    from keras.datasets import cifar10
+    img_w = img_h = 32
+    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+
+    print('X_train shape:', x_train.shape)
+    print(x_train.shape[0], 'train samples')
+    print(x_test.shape[0], 'test samples')
+
+    x_train = x_train.astype('float32') / 255
+    x_test = x_test.astype('float32') / 255
+
+    y_train = np_utils.to_categorical(y_train, nb_classes)
+    y_test = np_utils.to_categorical(y_test, nb_classes)
+
+    input_shape = x_train.shape[1:]
+    print('input shape:', input_shape)
+
+    return (x_train, y_train, x_test, y_test, input_shape)
+
+
+def saveModel(model, model_name):
+    # serialize model to JSON
+    model_json = model.to_json()
+    with open(model_name + ".json", "w") as json_file:
+        json_file.write(model_json)
+    # serialize weights to HDF5
+    model.save_weights(model_name + ".hdf5")
+    print("Saved model to disk")
+
+
+def loadModel(model_name):
+    # load json and create model
+    json_file = open('model_num_' + model_name + '.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json)
+    # load weights into new model
+    loaded_model.load_weights('model_num_' + model_name + ".hdf5")
+    print("Loaded model from disk")
+    return loaded_model
+
+
+def plotTrainingHistory(history, directory):
+    plt.plot(history.history['val_acc'])
+    plt.ylabel('accuracy')
+    plt.xlabel('epochs')
+    plt.legend(['validation accuracy'], loc='upper left')
+    plt.savefig(directory + "/graphic.png")
+    print("evolution graphic saved: " + directory + "/acc_graphic.png")
+    plt.plot(history.history['val_loss'])
+    plt.ylabel('loss')
+    plt.xlabel('epochs')
+    plt.legend(['validation loss'], loc='upper left')
+    plt.savefig(directory + "/loss_graphic.png")
+    print("evolution graphic saved: " + directory + "/loss_graphic.png")
+
+
+def showErrors(model, x_test, y_test, directory):
+    y_hat = model.predict_classes(x_test)
+    y_test_array = y_test.argmax(1)
+    pd.crosstab(y_hat, y_test_array)
+    test_wrong = [im for im in zip(x_test, y_hat, y_test_array) if im[1] != im[2]]
+    plt.figure(figsize=(32, 32))
+    for ind, val in enumerate(test_wrong[:20]):
+        plt.subplot(5, 4, ind + 1)
+        plt.axis("off")
+        plt.text(33, 15, labels[val[2]], fontsize=14, color='green')  # correct
+        plt.text(33, 30, labels[val[1]], fontsize=14, color='red')  # predicted
+        im = val[0].reshape(3, 32, 32).transpose(1, 2, 0)
+        plt.imshow(im)
+    plt.savefig(directory + "/errors.png")
+    print("errors images saved: " + directory + "/errors.png")
 
 if __name__ == '__main__':
     main()
