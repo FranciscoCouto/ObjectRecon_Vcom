@@ -1,3 +1,8 @@
-﻿  Source.cpp
+﻿  Utils.cpp
+c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\utils.cpp(231): warning C4244: 'argument': conversion from 'float' to 'int', possible loss of data
+c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\utils.cpp(292): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\utils.cpp(293): warning C4244: '=': conversion from '__int64' to 'int', possible loss of data
+c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\utils.cpp(376): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\utils.cpp(380): warning C4018: '<': signed/unsigned mismatch
   ObjectRecon_VCOM.vcxproj -> C:\Users\Francisco Couto\Documents\Visual Studio 2015\Projects\ObjectRecon_VCOM\x64\Debug\ObjectRecon_VCOM.exe
   ObjectRecon_VCOM.vcxproj -> C:\Users\Francisco Couto\Documents\Visual Studio 2015\Projects\ObjectRecon_VCOM\x64\Debug\ObjectRecon_VCOM.pdb (Full PDB)

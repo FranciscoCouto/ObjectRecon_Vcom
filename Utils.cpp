@@ -34,6 +34,9 @@ Mat Utils::extractLocalFeaturesSURF()
 			continue;
 		}
 
+		//Mat1b adjusted;
+		//imadjust(image, adjusted);
+
 		detector->detect(image, keypoints);
 
 		if (keypoints.empty()) {
@@ -44,6 +47,7 @@ Mat Utils::extractLocalFeaturesSURF()
 		extractor->compute(image, keypoints, extracted_descriptor);
 
 		if (extracted_descriptor.empty()) { fails.push_back(i); continue; }
+		//else { cout << extracted_descriptor.size(); }
 
 		train_descriptors.push_back(extracted_descriptor);
 
@@ -113,6 +117,8 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 			continue;
 		}
 
+		//Mat1b adjusted;
+		//imadjust(image, adjusted);
 
 		detector->detect(image, keypoints);
 
@@ -121,6 +127,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 		if (BOW_Descriptor.empty()) { continue; }
+		
 
 		training_data.push_back(BOW_Descriptor);
 
@@ -140,19 +147,28 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 	cout << "Applying SVM" << endl;
 
+	/*CvParamGrid CvParamGrid_C(pow(2.0, -5), pow(2.0, 15), pow(2.0, 2));
+	CvParamGrid CvParamGrid_gamma(pow(2.0, -15), pow(2.0, 3), pow(2.0, 2));
+	if (!CvParamGrid_C.check() || !CvParamGrid_gamma.check())
+		cout << "The grid is NOT VALID." << endl;
+	CvSVMParams paramz;
+	paramz.kernel_type = CvSVM::RBF;
+	paramz.svm_type = CvSVM::C_SVC;
+	*/
+	
 	CvSVMParams params;
-	//SVM type is defined as n-class classification n>=2, allows imperfect separation of classes
+
 	params.svm_type = CvSVM::C_SVC;
-	// No mapping is done, linear discrimination (or regression) is done in the original feature space.
 	params.kernel_type = CvSVM::RBF;
+	params.C = 1.0; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
+	params.gamma = 20.0;
 
-	//params.gamma = 0.1;
-	//params.C = 0;
-	//Define the termination criterion for SVM algorithm.
-	//Here stop the algorithm after the achieved algorithm-dependent accuracy becomes lower than epsilon
-	//or run for maximum 100 iterations
-	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+	params.p = 0.0; // for CV_SVM_EPS_SVR
 
+	params.class_weights = NULL; // for CV_SVM_C_SVC
+	//params = 0.5;
+
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER  + CV_TERMCRIT_EPS, 1000, 1e-6);
 	cout << "Training the SVM" << endl;
 
 	CvSVM SVM;
@@ -163,10 +179,11 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	CV_Assert(!labels.empty() && labels.type() == CV_32SC1);
 
 	//#pragma omp parallel for schedule(dynamic,3)
-	SVM.train_auto(training_data, labels, Mat(), Mat(), params); //SVM is trainning with the images (descriptors) - experimentar trainauto
-	//SVM.train(training_data, labels, Mat(), Mat(), params);
-	cout << params.gamma << params.degree;
+	//SVM.train_auto(training_data, labels, Mat(), Mat(), params, 10); //SVM is trainning with the images (descriptors) - experimentar trainauto
 
+	//cout << "C : " << SVM.get_params().C << "GAMMA : " << SVM.get_params().gamma;
+	SVM.train(training_data, labels, Mat(), Mat(), params);
+	//SVM.train_auto(training_data, labels, Mat(), Mat(), paramz, 10, CvParamGrid_C, CvParamGrid_gamma, CvSVM::get_default_grid(CvSVM::P), CvSVM::get_default_grid(CvSVM::NU), CvSVM::get_default_grid(CvSVM::COEF), CvSVM::get_default_grid(CvSVM::DEGREE), true);
 	cout << "SVM Classifier Trained" << endl;
 
 	Mat image, BOW_Descriptor;
@@ -186,34 +203,32 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 	results << "Id, name\n";
 
+	//#pragma omp parallel for schedule(dynamic,3)
 	for (int i = 1; i <= n_test_images; i++)
 	{
 		filename = "images/test/" + to_string(i) + ".png";
 		if (!openImage(filename, image))
 			continue;
 
+		//Mat1b adjusted;
+		//imadjust(image, adjusted);
+
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) {
-			//cout << "Could not get keypoints for " + to_string(i);
-			continue;
-		}
+		if (keypoints.empty()) { results << i << "," << "cat" << "\n";  continue;	}
 
 		extractor->compute(image, keypoints, BOW_Descriptor);
 
-		if (BOW_Descriptor.empty()) {
-			//cout << "Could not get keypoints for " + to_string(i);
-			continue;
-		}
+		if (BOW_Descriptor.empty()) { results << i << "," << "cat" << "\n";  continue; }
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 
 		float res = SVM.predict(BOW_Descriptor); //retorna a label correspondente, de seguida procuramos no map o nome associado
 
-		cout << "Image " << i << "predicted to be: " << findInMap(res) << res << endl;
+		//cout << "Image " << i << "predicted to be: " << findInMap(res) << res << endl;
 
-		results << i << "," << findInMap(res) << "," << "\n";
+		results << i << "," << findInMap(res) << "\n";
 		
 		loadbar(i, n_test_images, 50);
 	}
@@ -224,12 +239,72 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 bool Utils::openImage(const std::string & filename, Mat & image)
 {
 	//cout << filename;
-	image = imread(filename, CV_LOAD_IMAGE_GRAYSCALE);
+	Mat temp = imread(filename, 1);
+	cvtColor(temp, temp, CV_BGR2GRAY);
+
+	equalizeHist(temp, image);
+
+
 	if (!image.data) {
 		std::cout << " --(!) Error reading image " << filename << std::endl;
 		return false;
 	}
 	return true;
+}
+
+void Utils::imadjust(const Mat1b& src, Mat1b& dst)
+{
+	// src : input CV_8UC1 image
+	// dst : output CV_8UC1 imge
+	// tol : tolerance, from 0 to 100.
+	// in  : src image bounds
+	// out : dst image buonds
+
+	int tol = 1;
+	Vec2i in = Vec2i(0, 255), out = Vec2i(0, 255);
+
+	dst = src.clone();
+
+	tol = max(0, min(100, tol));
+
+	if (tol > 0)
+	{
+		// Compute in and out limits
+
+		// Histogram
+		vector<int> hist(256, 0);
+		for (int r = 0; r < src.rows; ++r) {
+			for (int c = 0; c < src.cols; ++c) {
+				hist[src(r, c)]++;
+			}
+		}
+
+		// Cumulative histogram
+		vector<int> cum = hist;
+		for (int i = 1; i < hist.size(); ++i) {
+			cum[i] = cum[i - 1] + hist[i];
+		}
+
+		// Compute bounds
+		int total = src.rows * src.cols;
+		int low_bound = total * tol / 100;
+		int upp_bound = total * (100 - tol) / 100;
+		in[0] = distance(cum.begin(), lower_bound(cum.begin(), cum.end(), low_bound));
+		in[1] = distance(cum.begin(), lower_bound(cum.begin(), cum.end(), upp_bound));
+
+	}
+
+	// Stretching
+	float scale = float(out[1] - out[0]) / float(in[1] - in[0]);
+	for (int r = 0; r < dst.rows; ++r)
+	{
+		for (int c = 0; c < dst.cols; ++c)
+		{
+			int vs = max(src(r, c) - in[0], 0);
+			int vd = min(int(vs * scale + 0.5f) + out[0], out[1]);
+			dst(r, c) = saturate_cast<uchar>(vd);
+		}
+	}
 }
 
 Mat Utils::parseCSV()
@@ -248,27 +323,25 @@ Mat Utils::parseCSV()
 
 	int what_is_it = 0, index = 1;
 
-	while (getline(file, line))
+	while (getline(file, line) && (index - 1) != n_train_images)
 	{
-		if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; continue; }
-
 		std::stringstream  lineStream(line);
 		std::string        cell;
 		while (getline(lineStream, cell, ','))
 		{
 
+			if ((find(fails.begin(), fails.end(), index) != fails.end())) { index++; break; }
+
 			if (what_is_it == 0) {
 				what_is_it++;
 			}
 			else {
-				//cout << cell << names.at(cell);
 				labels.push_back(names.at(cell));
 				what_is_it = 0;
 				index++;
 			}
 		}
 
-		if ((index -1) == n_train_images) { break; }
 	}
 
 	cout << "Finished Parsing Labels from CSV" << endl;

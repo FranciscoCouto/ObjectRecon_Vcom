@@ -40,6 +40,8 @@ public:
 	//OpenCv shenanigans
 	bool openImage(const std::string &filename, Mat &image);
 
+	void imadjust(const Mat1b& src, Mat1b& dst);
+
 	//Parsing Files
 	Mat parseCSV();
 
