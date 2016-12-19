@@ -16,9 +16,9 @@ Mat Utils::extractLocalFeaturesSURF()
 
 	cout << "Extracting the Descriptors (Feature Vectors) using SURF" << endl;
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
 	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
 
 	Mat image;
 	string filename;
@@ -91,9 +91,9 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 	//create a fast nearest neighbor matcher
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
 	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
 
 	//create BoF (or BoW) descriptor extractor
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
@@ -198,8 +198,8 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
+	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
 
 
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
@@ -213,7 +213,7 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	//#pragma omp parallel for schedule(dynamic,3)
 	int acc = 0, numImgs = 0;
-	for (int i = 1; i <= n_test_images; i++)
+	for (int i = 0; i < n_test_images; i++)
 	{
 		filename = "img_test/" + to_string(i) + ".jpg";
 		if (!openImage(filename, image))
@@ -250,7 +250,7 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 		numImgs++;
 		loadbar(i, n_test_images, 50);
 	}
-	cout << "test acc: " << (acc / 10000) << " predicted imgs: " << (numImgs / 10000) << endl;
+	cout << "test acc: " << (acc / numImgs) << " predicted imgs: " << (numImgs / 10000) << endl;
 
 
 	results.close();
