@@ -43,6 +43,7 @@ Mat Utils::extractLocalFeaturesSURF()
 			fails.push_back(i);
 			continue;
 		}
+		else KeyPointsFilter::retainBest(keypoints, 1000);
 
 		extractor->compute(image, keypoints, extracted_descriptor);
 
@@ -99,7 +100,9 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 	//Set the dictionary with the vocabulary we created in the first step
 	bowDE.setVocabulary(dictionary);
 
-	Mat image, BOW_Descriptor, training_data;
+	Mat image, BOW_Descriptor;
+	int num_files = n_train_images - fails.size();
+	Mat training_data(num_files, dictionary_size, CV_32FC1);
 	string filename;
 	vector<KeyPoint> keypoints;
 
@@ -160,15 +163,15 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 	params.svm_type = CvSVM::C_SVC;
 	params.kernel_type = CvSVM::RBF;
-	params.C = 1.0; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
+	params.C = 7.0; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
 	params.gamma = 20.0;
 
-	params.p = 0.0; // for CV_SVM_EPS_SVR
+	//params.p = 0.0; // for CV_SVM_EPS_SVR
 
-	params.class_weights = NULL; // for CV_SVM_C_SVC
+	//params.class_weights = NULL; // for CV_SVM_C_SVC
 	//params = 0.5;
 
-	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER  + CV_TERMCRIT_EPS, 1000, 1e-6);
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1e-6);
 	cout << "Training the SVM" << endl;
 
 	CvSVM SVM;
@@ -176,7 +179,7 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	cout << training_data.size() << "     " << labels.size() << endl;
 
 	CV_Assert(!training_data.empty() && training_data.type() == CV_32FC1);
-	CV_Assert(!labels.empty() && labels.type() == CV_32SC1);
+	CV_Assert(!labels.empty() && labels.type() == CV_32FC1);
 
 	//#pragma omp parallel for schedule(dynamic,3)
 	//SVM.train_auto(training_data, labels, Mat(), Mat(), params, 10); //SVM is trainning with the images (descriptors) - experimentar trainauto
@@ -186,6 +189,9 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	//SVM.train_auto(training_data, labels, Mat(), Mat(), paramz, 10, CvParamGrid_C, CvParamGrid_gamma, CvSVM::get_default_grid(CvSVM::P), CvSVM::get_default_grid(CvSVM::NU), CvSVM::get_default_grid(CvSVM::COEF), CvSVM::get_default_grid(CvSVM::DEGREE), true);
 	cout << "SVM Classifier Trained" << endl;
 
+	//SVM.save("training_storage"); // saving
+	//SVM.load("svm_filename"); // loading
+
 	Mat image, BOW_Descriptor;
 	string filename;
 	vector<KeyPoint> keypoints;
@@ -194,6 +200,8 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 	Ptr<FeatureDetector> detector = FeatureDetector::create("SURF");
 	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SURF");
+
+
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
 	//Set the dictionary with the vocabulary we created in the first step
 	bowDE.setVocabulary(dictionary);
@@ -215,18 +223,20 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) { results << i << "," << "cat" << "\n";  continue;	}
+		if (keypoints.empty()) {
+			results << i << "," << "cat" << "\n";
+			continue;
+		}
+		else KeyPointsFilter::retainBest(keypoints, 1000);
 
 		extractor->compute(image, keypoints, BOW_Descriptor);
 
-		if (BOW_Descriptor.empty()) { results << i << "," << "cat" << "\n";  continue; }
+		if (BOW_Descriptor.empty()) { /*results << i << "," << "cat" << "\n";*/  continue; }
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 
 		float res = SVM.predict(BOW_Descriptor); //retorna a label correspondente, de seguida procuramos no map o nome associado
-
-		//cout << "Image " << i << "predicted to be: " << findInMap(res) << res << endl;
 
 		results << i << "," << findInMap(res) << "\n";
 		
@@ -313,8 +323,9 @@ Mat Utils::parseCSV()
 	cout << "Parsing Labels from CSV" << endl;
 
 	ifstream file("trainLabels.csv");
-
-	Mat labels;
+	
+	int num_files = n_train_images - fails.size();
+	Mat labels(num_files, 1, CV_32FC1);
 
 	// Get and drop a line
 	file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -336,7 +347,7 @@ Mat Utils::parseCSV()
 				what_is_it++;
 			}
 			else {
-				labels.push_back(names.at(cell));
+				labels.push_back((float) names.at(cell));
 				what_is_it = 0;
 				index++;
 			}

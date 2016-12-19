@@ -16,29 +16,28 @@ int main(int argc, char** argv)
 {
 	initModule_nonfree();
 	Mat train_descriptors, dictionary;
-		
-	Mat	training_data;
-	Mat labels;
+	
+	int num_files = NUM_FILES_TRAIN - u.fails.size();
+	Mat trainingData(num_files, DICTIONARY_SIZE, CV_32FC1);
+	
+	Mat labels(num_files, 1, CV_32FC1);
 
-	// Extract features from training set that contains all classes. - USING SURF: Fast version of SIFT
+	//1. We pick out features from all the images in our training dataset
 	train_descriptors = u.extractLocalFeaturesSURF();
 
-	//Create a vocabulary of features by clustering the features (kNN, etc). Let's say 1000 features long.
+	//We cluster these features using any clustering algorithm
 	dictionary = u.CreateBOW(train_descriptors);
 
-	//This time check the features in each image for their closest clusters in the vocabulary.
-	//Create a histogram of responses for each image to words in the vocabulary, it will be a 1000 - entries long vector.
-	//Create a sample - label dataset for the training.
-	training_data = u.CreateTrainingData(dictionary);
+	//3. We use the cluster as a vocabulary to construct histograms. We simply count the no. of features from each image belonging to each cluster. 
+	//Then we normalize the histograms by dividing it with the no. of features. 
+	//Therefore, each image in the dataset is represented by one histogram.
+	trainingData = u.CreateTrainingData(dictionary);
 
-	 // we have to convert to float:
-	training_data.convertTo(training_data, CV_32F);
-
-	//Parse the csv with the correspondent labels that give meaning to each class previously parsed
+	//4. Parse the csv with the correspondent labels that give meaning to each class previously parsed
 	labels = u.parseCSV();
 
-	//Run the trainer and the classifier and it should, god willing, give you the right class
-	u.applySVM(training_data, labels, dictionary);
+	//5. Then these histograms are passed to an SVM for training. 
+	u.applySVM(trainingData, labels, dictionary);
 
 	std::getchar();
 
