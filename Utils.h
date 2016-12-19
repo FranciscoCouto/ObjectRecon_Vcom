@@ -35,7 +35,7 @@ public:
 	//Create Training Data by creating histograms for each image to be used in SVM
 	Mat CreateTrainingData(Mat dictionary);
 
-	void applySVM(Mat training_data, Mat labels, Mat dictionary);
+	void applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY);
 
 	//OpenCv shenanigans
 	bool openImage(const std::string &filename, Mat &image);

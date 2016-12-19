@@ -125,12 +125,12 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) { continue;	}
+		if (keypoints.empty()) { continue; }
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 		if (BOW_Descriptor.empty()) { continue; }
-		
+
 
 		training_data.push_back(BOW_Descriptor);
 
@@ -145,7 +145,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 }
 
-void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
+void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 {
 
 	cout << "Applying SVM" << endl;
@@ -158,7 +158,7 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	paramz.kernel_type = CvSVM::RBF;
 	paramz.svm_type = CvSVM::C_SVC;
 	*/
-	
+
 	CvSVMParams params;
 
 	params.svm_type = CvSVM::C_SVC;
@@ -212,9 +212,10 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 	results << "Id, name\n";
 
 	//#pragma omp parallel for schedule(dynamic,3)
+	int acc = 0, numImgs = 0;
 	for (int i = 1; i <= n_test_images; i++)
 	{
-		filename = "images/test/" + to_string(i) + ".png";
+		filename = "img_test/" + to_string(i) + ".jpg";
 		if (!openImage(filename, image))
 			continue;
 
@@ -225,23 +226,32 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary)
 
 		if (keypoints.empty()) {
 			results << i << "," << "cat" << "\n";
+			cout << "Fail keypoints" << endl;
 			continue;
 		}
 		else KeyPointsFilter::retainBest(keypoints, 1000);
 
 		extractor->compute(image, keypoints, BOW_Descriptor);
 
-		if (BOW_Descriptor.empty()) { /*results << i << "," << "cat" << "\n";*/  continue; }
+		if (BOW_Descriptor.empty()) {
+			results << i << "," << "cat" << "\n";
+			cout << "Fail descriptor" << endl;
+			continue;
+		}
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
 
 		float res = SVM.predict(BOW_Descriptor); //retorna a label correspondente, de seguida procuramos no map o nome associado
-
+		if (res == testY.at<double>(i)) {
+			acc++;
+		}
 		results << i << "," << findInMap(res) << "\n";
-		
+		numImgs++;
 		loadbar(i, n_test_images, 50);
 	}
+	cout << "test acc: " << (acc / 10000) << " predicted imgs: " << (numImgs / 10000) << endl;
+
 
 	results.close();
 }
@@ -323,7 +333,7 @@ Mat Utils::parseCSV()
 	cout << "Parsing Labels from CSV" << endl;
 
 	ifstream file("trainLabels.csv");
-	
+
 	int num_files = n_train_images - fails.size();
 	Mat labels(num_files, 1, CV_32FC1);
 
@@ -347,7 +357,7 @@ Mat Utils::parseCSV()
 				what_is_it++;
 			}
 			else {
-				labels.push_back((float) names.at(cell));
+				labels.push_back((float)names.at(cell));
 				what_is_it = 0;
 				index++;
 			}

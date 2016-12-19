@@ -4,7 +4,7 @@
 #include "Utils.h"
 
 #define NUM_FILES_TRAIN 50000 //Number of files to be used in images/train
-#define NUM_FILES_TEST 300000 //Number of files to be used in images/test
+#define NUM_FILES_TEST 10000 //Number of files to be used in images/test
 #define DICTIONARY_SIZE 1000//typical values range from 10^3 to 10^5, however this depends much on the application.
 
 TermCriteria tc(CV_TERMCRIT_ITER, 100, 0.001);
@@ -25,25 +25,25 @@ int main(int argc, char** argv)
 
 	read_CIFAR10(trainX, testX, trainY, testY);
 
-	for (int i = 0; i < testX.cols; i++)
-	{
-		string filename = "./img_test/" + to_string(i);
-		filename += ".jpg";
-		cout << filename << endl;
-		Mat temp = Mat::zeros(32, 32, CV_64F);
-		int acc = 0;
-		for (int j = 0; j < 32; j++) {
-			for (int k = 0; k < 32; k++) {
-				temp.at<double>(j, k) = testX.at<double>(acc, i);
-				acc++;
-			}
-		}
-		temp.convertTo(temp, CV_8UC3, 255.0);
-		imwrite(filename, temp);
-		//imshow("t", temp);
-		//waitKey();
-	}
-	return 0;
+	//for (int i = 0; i < testX.cols; i++)
+	//{
+	//	string filename = "./img_test/" + to_string(i);
+	//	filename += ".jpg";
+	//	cout << filename << endl;
+	//	Mat temp = Mat::zeros(32, 32, CV_64F);
+	//	int acc = 0;
+	//	for (int j = 0; j < 32; j++) {
+	//		for (int k = 0; k < 32; k++) {
+	//			temp.at<double>(j, k) = testX.at<double>(acc, i);
+	//			acc++;
+	//		}
+	//	}
+	//	temp.convertTo(temp, CV_8UC3, 255.0);
+	//	imwrite(filename, temp);
+	//	//imshow("t", temp);
+	//	//waitKey();
+	//}
+	//return 0;
 	Mat train_descriptors, dictionary;
 
 	int num_files = NUM_FILES_TRAIN - u.fails.size();
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 	labels = u.parseCSV();
 
 	//5. Then these histograms are passed to an SVM for training. 
-	u.applySVM(trainingData, labels, dictionary);
+	u.applySVM(trainingData, labels, dictionary, testY);
 
 	std::getchar();
 
