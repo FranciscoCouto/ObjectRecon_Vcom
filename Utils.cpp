@@ -8,7 +8,7 @@ Utils::Utils(int dictionary_size, int n_train_images, int n_test_images, TermCri
 	this->n_test_images = n_test_images;
 	this->tc = tc;
 
-	names = { {"airplane", 1},{ "automobile", 2 },{ "bird", 3 },{"cat", 4 },{ "deer", 5 },{ "dog", 6 },{ "frog", 7 },{ "horse", 8 },{ "ship", 9 },{ "truck", 10 } };
+	names = { {"airplane", 0},{ "automobile", 1 },{ "bird", 2 },{"cat", 3 },{ "deer", 4 },{ "dog", 5 },{ "frog", 6 },{ "horse", 7 },{ "ship", 8 },{ "truck", 9 } };
 }
 
 Mat Utils::extractLocalFeaturesSURF()
@@ -163,8 +163,8 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	params.svm_type = CvSVM::C_SVC;
 	params.kernel_type = CvSVM::RBF;
-	params.C = 7.0; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
-	params.gamma = 20.0;
+	params.C = 0.1; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
+	params.gamma = 8.0;
 
 	//params.p = 0.0; // for CV_SVM_EPS_SVR
 
