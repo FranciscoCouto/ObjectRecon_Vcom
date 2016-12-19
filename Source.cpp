@@ -3,9 +3,9 @@
 
 #include "Utils.h"
 
-#define NUM_FILES_TRAIN 1500 //Number of files to be used in images/train
-#define NUM_FILES_TEST 100 //Number of files to be used in images/test
-#define DICTIONARY_SIZE 250 //typical values range from 10^3 to 10^5, however this depends much on the application.
+#define NUM_FILES_TRAIN 50000 //Number of files to be used in images/train
+#define NUM_FILES_TEST 30 //Number of files to be used in images/test
+#define DICTIONARY_SIZE 1000//typical values range from 10^3 to 10^5, however this depends much on the application.
 
 TermCriteria tc(CV_TERMCRIT_ITER, 100, 0.001);
 
