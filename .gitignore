@@ -13,3 +13,5 @@ CNN_keras/model_6_epochs_10/
 CNN_keras/model_0_epochs_10/
 CNN_keras/model_0_epochs_80_aug_/
 CNN_keras/model_7_epochs_10/
+img_test/
+cifar-10-batches-bin/

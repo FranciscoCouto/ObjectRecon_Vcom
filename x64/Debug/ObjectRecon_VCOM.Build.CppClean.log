@@ -1,13 +1,14 @@
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\vc140.pdb
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\vc140.idb
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\source.obj
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\utils.obj
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\x64\debug\objectrecon_vcom.ilk
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\x64\debug\objectrecon_vcom.exe
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\x64\debug\objectrecon_vcom.pdb
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.command.1.tlog
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.read.1.tlog
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.write.1.tlog
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.command.1.tlog
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.read.1.tlog
-c:\users\francisco couto\documents\visual studio 2015\projects\objectrecon_vcom\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.write.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\vc140.pdb
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\vc140.idb
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\cifar10.obj
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\source.obj
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\utils.obj
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.ilk
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.exe
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.pdb
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.command.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.read.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\cl.write.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.command.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.read.1.tlog
+d:\_workspace\vstudio\objectrecon_vcom\x64\debug\objectrecon_vcom.tlog\link.write.1.tlog
