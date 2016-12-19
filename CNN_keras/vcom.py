@@ -27,13 +27,13 @@ labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse
 # TODO
 # correr o 2 com 20 epochs para ver se é melhor que o 3
 # correr o 3 com 20 epochs para ver se as alterações melhoraram ou não
-# treinar uma rede das que ganhou nos ultimos anos tipo resnet50, obter a rede do keras
+# treinar uma rede das que ganhou nos ultimos anos tipo vgg16, obter a rede do keras
 
 
 def printUsage():
     print("Usage: ")
-    print("\t python vcom.py train <model_num/resnet50> <epochs>")
-    print("\t python vcom.py test <model_num/resnet50> <weights file>")
+    print("\t python vcom.py train <model_num/vgg16> <epochs>")
+    print("\t python vcom.py test <model_num/vgg16> <weights file>")
     sys.exit(-1)
 
 
@@ -42,7 +42,7 @@ def main():
         printUsage()
     elif(sys.argv[1] == 'train'):
         train = True
-        if(sys.argv[2] == 'resnet50'):
+        if(sys.argv[2] == 'vgg16'):
             use_resnet = True
             if(len(sys.argv) != 4):
                 printUsage()
@@ -59,7 +59,7 @@ def main():
 
     elif(sys.argv[1] == 'test'):
         train = False
-        if(sys.argv[2] == 'resnet50'):
+        if(sys.argv[2] == 'vgg16'):
             use_resnet = True
             if(len(sys.argv) != 4):
                 printUsage()
@@ -200,8 +200,8 @@ def main():
             plotTrainingHistory(history, directory)
             showErrors(model, x_test, y_test, directory)
         else:
-            print("\n # RUNNING RESNET50 NEURONAL NETWORK # \n")
-            resnet50(nb_epoch)
+            print("\n # RUNNING VGG16 NEURONAL NETWORK # \n")
+            vgg16(nb_epoch)
     else:
         model = loadModel(str(model_num))
         sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
@@ -578,40 +578,16 @@ def model_7(input_shape):
     return model
 
 
-def resnet50(nb_epoch):
+def vgg16(nb_epoch):
 
     # work around theano maximum recursion limit exception
     import sys
     sys.setrecursionlimit(50000)
 
-    # Dataset of 50,000 32x32 color training images, labeled over 10
-    # categories, and 10,000 test images.
-    from keras.datasets import cifar10
-    from keras.applications.vgg16 import VGG16
     from keras.models import Model
 
     # load and prepare dataset
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    x_train = x_train.astype('float32') / 255
-    x_test = x_test.astype('float32') / 255
-    y_train = np_utils.to_categorical(y_train, nb_classes)
-    y_test = np_utils.to_categorical(y_test, nb_classes)
-
-    '''
-    # get resnet50 cnn model, non-trained
-    base_model = VGG16(include_top=False, weights=None, input_shape=(3, 224, 224))
-
-    # we need to add 2 extra layers to adapt the images dimensions and the number of predicted classes
-    model = Sequential()
-    # add zeropadding layer to obtain 224x224 images instead of 32x32. 224x224 is a resnet50 requirement
-    model.add(ZeroPadding2D(padding=(96, 96, 96, 96), dim_ordering='default', input_shape=(3, 32, 32)))
-    model.add(base_model)
-    # add a fully-connected layer
-    model.add(Flatten())
-    model.add(Dense(4096, activation='relu', name='fc1'))
-    model.add(Dense(4096, activation='relu', name='fc2'))
-    model.add(Dense(nb_classes, activation='softmax'))
-    '''
+    x_train, y_train, x_test, y_test, input_shape = loadCifar_10Dataset()
 
     img_input = Input(shape=(3, 32, 32))
     # Block 1
@@ -628,21 +604,18 @@ def resnet50(nb_epoch):
     x = Convolution2D(256, 3, 3, activation='relu', border_mode='same', name='block3_conv1')(x)
     x = Convolution2D(256, 3, 3, activation='relu', border_mode='same', name='block3_conv2')(x)
     x = Convolution2D(256, 3, 3, activation='relu', border_mode='same', name='block3_conv3')(x)
-    x = Convolution2D(256, 3, 3, activation='relu', border_mode='same', name='block3_conv4')(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
 
     # Block 4
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block4_conv1')(x)
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block4_conv2')(x)
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block4_conv3')(x)
-    x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block4_conv4')(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
 
     # Block 5
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block5_conv1')(x)
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block5_conv2')(x)
     x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block5_conv3')(x)
-    x = Convolution2D(512, 3, 3, activation='relu', border_mode='same', name='block5_conv4')(x)
     x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
 
     # Classification block
@@ -652,14 +625,6 @@ def resnet50(nb_epoch):
     x = Dense(nb_classes, activation='softmax', name='predictions')(x)
 
     model = Model(img_input, x)
-
-    # start = ZeroPadding2D(padding=(96, 96, 96, 96), dim_ordering='default', input_shape=(3,32,32))
-    # out = base_model(start)
-    # out = Flatten()(out)
-    # predictions = Dense(nb_classes, activation='softmax')(out)
-
-    # this is the model we will train
-    # model = Model(input=base_model.input, output=model.output)
 
     # set optimizer and compile the model
     sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
@@ -673,7 +638,7 @@ def resnet50(nb_epoch):
     # test the model
     score = model.evaluate(x_test, y_test)
     print("\nTest accuracy: %0.05f" % score[1])
-    directory = "./resnet50_epochs" + str(nb_epoch)
+    directory = "./vgg16_epochs" + str(nb_epoch)
     saveModel(model, directory + "/model_resnet59")
 
     plotTrainingHistory(history, directory)
