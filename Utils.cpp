@@ -102,7 +102,8 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	Mat image, BOW_Descriptor;
 	int num_files = n_train_images - fails.size();
-	Mat training_data(num_files, dictionary_size, CV_32FC1);
+	//Mat training_data(num_files, dictionary_size, CV_32FC1);
+	Mat training_data;
 	string filename;
 	vector<KeyPoint> keypoints;
 
@@ -125,11 +126,17 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) { continue; }
+		if (keypoints.empty()) { 
+			cout << "Descriptor not found for train img: "<< i << endl; 
+			continue; 
+		}
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
-		if (BOW_Descriptor.empty()) { continue; }
+		if (BOW_Descriptor.empty()) { 
+			cout << "BOW not found for train img: " << i << endl;
+			continue; 
+		}
 
 
 		training_data.push_back(BOW_Descriptor);
@@ -250,9 +257,9 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 		numImgs++;
 		loadbar(i, n_test_images, 50);
 	}
-	cout << "test acc: " << (acc / numImgs) << " predicted imgs: " << (numImgs / 10000) << endl;
 
-
+	printf("test acc: %f | predicted imgs: %d \n", (acc / (double)numImgs), numImgs);
+	//cout << "test acc: " << (acc / numImgs) << " predicted imgs: " << (numImgs / 10000) << endl;
 	results.close();
 }
 
@@ -335,7 +342,7 @@ Mat Utils::parseCSV()
 	ifstream file("trainLabels.csv");
 
 	int num_files = n_train_images - fails.size();
-	Mat labels(num_files, 1, CV_32FC1);
+	Mat labels;// (num_files, 1, CV_32FC1);
 
 	// Get and drop a line
 	file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');

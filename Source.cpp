@@ -51,9 +51,9 @@ int main(int argc, char** argv)
 	Mat train_descriptors, dictionary;
 
 	int num_files = NUM_FILES_TRAIN - u.fails.size();
-	Mat trainingData(num_files, DICTIONARY_SIZE, CV_32FC1);
+	Mat trainingData;// (num_files, DICTIONARY_SIZE, CV_32FC1);
 
-	Mat labels(num_files, 1, CV_32FC1);
+	Mat labels;// (num_files, 1, CV_32FC1);
 	string filename = "dictionary.yml";
 	if (FILE *file = fopen(filename.c_str(), "r")) {
 		fclose(file);
