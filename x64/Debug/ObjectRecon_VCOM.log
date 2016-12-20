@@ -1,4 +1,0 @@
-﻿  Source.cpp
-d:\_workspace\vstudio\objectrecon_vcom\source.cpp(49): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-  ObjectRecon_VCOM.vcxproj -> D:\_WORKSPACE\VStudio\ObjectRecon_Vcom\x64\Debug\ObjectRecon_VCOM.exe
-  ObjectRecon_VCOM.vcxproj -> D:\_WORKSPACE\VStudio\ObjectRecon_Vcom\x64\Debug\ObjectRecon_VCOM.pdb (Full PDB)

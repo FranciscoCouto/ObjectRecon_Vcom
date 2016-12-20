@@ -40,6 +40,7 @@ Mat Utils::extractLocalFeaturesSURF()
 		detector->detect(image, keypoints);
 
 		if (keypoints.empty()) {
+			cout << "Keypoints not found for train img: " << i << endl;
 			fails.push_back(i);
 			continue;
 		}
@@ -47,7 +48,11 @@ Mat Utils::extractLocalFeaturesSURF()
 
 		extractor->compute(image, keypoints, extracted_descriptor);
 
-		if (extracted_descriptor.empty()) { fails.push_back(i); continue; }
+		if (extracted_descriptor.empty()) { 
+			cout << "Descriptor not found for train img: " << i << endl;
+			fails.push_back(i); 
+			continue; 
+		}
 		//else { cout << extracted_descriptor.size(); }
 
 		train_descriptors.push_back(extracted_descriptor);
@@ -127,7 +132,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 		detector->detect(image, keypoints);
 
 		if (keypoints.empty()) { 
-			cout << "Descriptor not found for train img: "<< i << endl; 
+			cout << "Keypoints not found for train img: "<< i << endl; 
 			fails.push_back(i);
 			continue; 
 		}
@@ -172,7 +177,7 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	params.svm_type = CvSVM::C_SVC;
 	params.kernel_type = CvSVM::RBF;
-	params.C = 0.1; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
+	params.C = 100; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
 	params.gamma = 8.0;
 
 	//params.p = 0.0; // for CV_SVM_EPS_SVR
