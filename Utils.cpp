@@ -116,7 +116,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		filename = "images/train/" + to_string(i) + ".png";
 		if (!openImage(filename, image)) {
-
+			fails.push_back(i);
 			cout << "Could not open image " + to_string(i);
 			continue;
 		}
@@ -128,6 +128,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		if (keypoints.empty()) { 
 			cout << "Descriptor not found for train img: "<< i << endl; 
+			fails.push_back(i);
 			continue; 
 		}
 
@@ -135,6 +136,7 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		if (BOW_Descriptor.empty()) { 
 			cout << "BOW not found for train img: " << i << endl;
+			fails.push_back(i);
 			continue; 
 		}
 
