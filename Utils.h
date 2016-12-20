@@ -34,6 +34,7 @@ public:
 
 	//Create Training Data by creating histograms for each image to be used in SVM
 	Mat CreateTrainingData(Mat dictionary);
+	Mat LoadTrainingData(Mat dictionary);
 
 	void applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY);
 

@@ -1,4 +1,7 @@
 #include "Utils.h"
+#include <filesystem>
+
+namespace fs = std::experimental::filesystem;
 
 Utils::Utils(int dictionary_size, int n_train_images, int n_test_images, TermCriteria tc)
 {
@@ -14,7 +17,7 @@ Utils::Utils(int dictionary_size, int n_train_images, int n_test_images, TermCri
 Mat Utils::extractLocalFeaturesSURF()
 {
 
-	cout << "Extracting the Descriptors (Feature Vectors) using "<< alg << endl;
+	cout << "Extracting the Descriptors (Feature Vectors) using " << alg << endl;
 
 	Ptr<FeatureDetector> detector = FeatureDetector::create(alg);
 	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
@@ -48,10 +51,10 @@ Mat Utils::extractLocalFeaturesSURF()
 
 		extractor->compute(image, keypoints, extracted_descriptor);
 
-		if (extracted_descriptor.empty()) { 
+		if (extracted_descriptor.empty()) {
 			cout << "Descriptor not found for train img: " << i << endl;
-			fails.push_back(i); 
-			continue; 
+			fails.push_back(i);
+			continue;
 		}
 		//else { cout << extracted_descriptor.size(); }
 
@@ -112,7 +115,9 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 	string filename;
 	vector<KeyPoint> keypoints;
 
-
+	if (!fs::exists("train_data")) {
+		fs::create_directory("train_data");
+	}
 	cout << "Extracting histograms in the form of BOW for each trainning image" << endl;
 
 	for (int i = 1; i <= n_train_images; i++)
@@ -131,21 +136,24 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 		detector->detect(image, keypoints);
 
-		if (keypoints.empty()) { 
-			cout << "Keypoints not found for train img: "<< i << endl; 
+		if (keypoints.empty()) {
+			cout << "Keypoints not found for train img: " << i << endl;
 			fails.push_back(i);
-			continue; 
+			continue;
 		}
 
 		bowDE.compute(image, keypoints, BOW_Descriptor);
 
-		if (BOW_Descriptor.empty()) { 
+		if (BOW_Descriptor.empty()) {
 			cout << "BOW not found for train img: " << i << endl;
 			fails.push_back(i);
-			continue; 
+			continue;
 		}
 
-
+		cv::FileStorage fs("train_data/" + to_string(i) + ".yml", cv::FileStorage::WRITE);
+		fs << "hist" << BOW_Descriptor;
+		fs.release();
+		
 		training_data.push_back(BOW_Descriptor);
 
 		loadbar(i, n_train_images, 50);
@@ -157,6 +165,36 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 
 	return training_data;
 
+}
+
+Mat Utils::LoadTrainingData(Mat dictionary)
+{
+	Mat training_data;
+	string filename;
+	Mat tmp;
+	cout << "Loading Training Data" << endl;
+	if (!fs::exists("train_data")) {
+		cout << "No Training data found!" << endl;
+		return CreateTrainingData(dictionary);
+	}
+	else {
+		for (int i = 1; i <= n_train_images; i++)
+		{
+			cv::FileStorage fs2("train_data/" + to_string(i) + ".yml", FileStorage::READ);
+			fs2["hist"] >> tmp;
+			fs2.release();
+			if (!tmp.data) {
+				cout << "BOW for img " << i << "not found" << endl;
+				fails.push_back(i);
+			}
+			else {
+				training_data.push_back(tmp);
+			}
+			loadbar(i, n_train_images, 50);
+		}
+		cout << "Training Data Loaded" << endl;
+		return training_data;
+	}
 }
 
 void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
@@ -177,8 +215,8 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	params.svm_type = CvSVM::C_SVC;
 	params.kernel_type = CvSVM::RBF;
-	params.C = 100; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
-	params.gamma = 8.0;
+	params.C = 10; //C is the parameter for the soft margin cost function, which controls the influence of each individual support vector; this process involves trading error penalty for stability.
+	params.gamma = 100.0;
 
 	//params.p = 0.0; // for CV_SVM_EPS_SVR
 

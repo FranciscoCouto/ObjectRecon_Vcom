@@ -60,6 +60,7 @@ int main(int argc, char** argv)
 		FileStorage fs("dictionary.yml", FileStorage::READ);
 		fs["vocabulary"] >> dictionary;
 		fs.release();
+		trainingData = u.LoadTrainingData(dictionary);
 	}
 	else {
 		//1. We pick out features from all the images in our training dataset
@@ -67,12 +68,11 @@ int main(int argc, char** argv)
 
 		//We cluster these features using any clustering algorithm
 		dictionary = u.CreateBOW(train_descriptors);
+		//3. We use the cluster as a vocabulary to construct histograms. We simply count the no. of features from each image belonging to each cluster. 
+		//Then we normalize the histograms by dividing it with the no. of features. 
+		//Therefore, each image in the dataset is represented by one histogram.
+		trainingData = u.CreateTrainingData(dictionary);
 	}
-
-	//3. We use the cluster as a vocabulary to construct histograms. We simply count the no. of features from each image belonging to each cluster. 
-	//Then we normalize the histograms by dividing it with the no. of features. 
-	//Therefore, each image in the dataset is represented by one histogram.
-	trainingData = u.CreateTrainingData(dictionary);
 
 	//4. Parse the csv with the correspondent labels that give meaning to each class previously parsed
 	labels = u.parseCSV();
