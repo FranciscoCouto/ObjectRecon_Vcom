@@ -4,7 +4,6 @@
 #include <opencv2/nonfree/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/core/core.hpp>
-
 #include <opencv2/ml/ml.hpp>
 
 #include <fstream>
@@ -23,6 +22,7 @@ public:
 
 	map< std::string, int> names;
 	vector <int> fails;
+	string alg = "SIFT";
 
 	Utils(int n_words, int n_train_images,int n_test_images, TermCriteria tc);
 

@@ -14,11 +14,11 @@ Utils::Utils(int dictionary_size, int n_train_images, int n_test_images, TermCri
 Mat Utils::extractLocalFeaturesSURF()
 {
 
-	cout << "Extracting the Descriptors (Feature Vectors) using SURF" << endl;
+	cout << "Extracting the Descriptors (Feature Vectors) using "<< alg << endl;
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create(alg);
 	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(alg);
 
 	Mat image;
 	string filename;
@@ -96,9 +96,9 @@ Mat Utils::CreateTrainingData(Mat dictionary)
 	//create a fast nearest neighbor matcher
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create(alg);
 	//SurfFeatureDetector detector(400); //test to check if less images failed by changing threshold of hessian matrix
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(alg);
 
 	//create BoF (or BoW) descriptor extractor
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
@@ -212,8 +212,8 @@ void Utils::applySVM(Mat training_data, Mat labels, Mat dictionary, Mat testY)
 
 	Ptr<DescriptorMatcher> matcher(new FlannBasedMatcher);
 
-	Ptr<FeatureDetector> detector = FeatureDetector::create("SIFT");
-	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
+	Ptr<FeatureDetector> detector = FeatureDetector::create(alg);
+	Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create(alg);
 
 
 	BOWImgDescriptorExtractor bowDE(extractor, matcher);
