@@ -1,4 +1,0 @@
-- diminuir dropouts
-- aumentar filtros
-- testar com e sem data augmentation
-- retirar algumas camadas
