@@ -33,7 +33,7 @@ labels = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse
 def printUsage():
     print("Usage: ")
     print("\t python vcom.py train <model_num/vgg16> <epochs>")
-    print("\t python vcom.py test <model_num/vgg16> <weights file>")
+    print("\t python vcom.py test <model_num/vgg16>")
     sys.exit(-1)
 
 
@@ -61,19 +61,9 @@ def main():
         train = False
         if(sys.argv[2] == 'vgg16'):
             use_resnet = True
-            if(len(sys.argv) != 4):
-                printUsage()
-            else:
-                weightsFile = sys.argv[3]
-
         else:
             use_resnet = False
             model_num = int(sys.argv[2])
-            if(len(sys.argv) != 4):
-                printUsage()
-            else:
-                weightsFile = sys.argv[3]
-
     else:
         printUsage()
 
@@ -149,12 +139,6 @@ def main():
             if data_augmentation:
                 # data augmentation
 
-                shift = 0.2
-                datagen = ImageDataGenerator(horizontal_flip=True, vertical_flip=True, width_shift_range=shift,
-                                             height_shift_range=shift, rotation_range=90)
-
-                datagen.fit(x_train)
-
                 print('Using real-time data augmentation.')
 
                 # this will do preprocessing and realtime data augmentation
@@ -208,6 +192,7 @@ def main():
         model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
         score = model.evaluate(x_test, y_test)
         print("\nTest accuracy: %0.05f" % score[1])
+        showErrorsScreen(model, x_test, y_test)
 
 
 def model_0(input_shape):
@@ -720,6 +705,24 @@ def showErrors(model, x_test, y_test, directory):
         plt.imshow(im)
     plt.savefig(directory + "/errors.png")
     print("errors images saved: " + directory + "/errors.png")
+
+def showErrorsScreen(model, x_test, y_test):
+    y_hat = model.predict_classes(x_test)
+    y_test_array = y_test.argmax(1)
+    pd.crosstab(y_hat, y_test_array)
+    test_wrong = [im for im in zip(x_test, y_hat, y_test_array) if im[1] != im[2]]
+    plt.figure(figsize=(32, 32))
+    for ind, val in enumerate(test_wrong[:20]):
+        plt.subplot(5, 4, ind + 1)
+        plt.axis("off")
+        plt.text(33, 15, labels[val[2]], fontsize=14, color='green')  # correct
+        plt.text(33, 30, labels[val[1]], fontsize=14, color='red')  # predicted
+        im = val[0].reshape(3, 32, 32).transpose(1, 2, 0)
+        plt.imshow(im)
+    plt.show()
+
+    for ind, val in enumerate(test_wrong):
+    	print(labels[val[2]]+";"+labels[val[1]])
 
 if __name__ == '__main__':
     main()

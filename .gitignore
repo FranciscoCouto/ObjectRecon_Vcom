@@ -16,3 +16,4 @@ CNN_keras/model_7_epochs_10/
 img_test/
 cifar-10-batches-bin/
 CNN_keras/model_6_epochs_50_aug_/
+train_data/
